@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canAllocateToPool, calculateWithdrawalFee, canRequestWithdrawal } from '../src/server/services/rules';
 import { canSearchResource, defaultAdminPathForRole, hasAnyAdminPermission, hasPermission } from '../src/server/permissions/rbac';
 import { userOwnedActiveAllocationWhere, userOwnedPaymentWhere, userOwnedTicketWhere } from '../src/server/permissions/ownership';
-import { canUserAdvanceMockPayment, isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
+import { canUserAdvanceMockPayment, expectedUserMockPaymentSource, isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
 import { createSessionToken, SESSION_MAX_AGE_MS, verifySessionToken } from '../src/server/auth/session';
 import { enumParam, normalizeQuery, safeCapacityUtilization, safePercent } from '../src/lib/safe-math';
 import { calculateRemainingWithdrawalEligibility, withdrawalLedgerReference, WITHDRAWAL_CONSUMING_STATUSES } from '../src/server/services/withdrawals';
@@ -150,6 +150,16 @@ describe('mock payment authorization helpers', () => {
     expect(canUserAdvanceMockPayment('PENDING', 'COMPLETED')).toBe(false);
     expect(canUserAdvanceMockPayment('CONFIRMING', 'DETECTED')).toBe(false);
     expect(canUserAdvanceMockPayment('UNDER_REVIEW', 'COMPLETED')).toBe(false);
+  });
+  it('derives exact expected source statuses for atomic user payment updates', () => {
+    expect(expectedUserMockPaymentSource('DETECTED')).toBe('PENDING');
+    expect(expectedUserMockPaymentSource('CONFIRMING')).toBe('DETECTED');
+    expect(expectedUserMockPaymentSource('COMPLETED')).toBe('CONFIRMING');
+  });
+  it('rejects stale concurrent user transition attempts', () => {
+    expect(canUserAdvanceMockPayment('DETECTED', 'DETECTED')).toBe(false);
+    expect(canUserAdvanceMockPayment('CONFIRMING', 'CONFIRMING')).toBe(false);
+    expect(canUserAdvanceMockPayment('COMPLETED', 'COMPLETED')).toBe(false);
   });
 });
 
