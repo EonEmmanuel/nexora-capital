@@ -3,6 +3,9 @@ import { canAllocateToPool, calculateWithdrawalFee, canRequestWithdrawal } from 
 import { canSearchResource, hasAnyAdminPermission, hasPermission } from '../src/server/permissions/rbac';
 import { userOwnedActiveAllocationWhere, userOwnedPaymentWhere, userOwnedTicketWhere } from '../src/server/permissions/ownership';
 import { isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
+import { createSessionToken, SESSION_MAX_AGE_MS, verifySessionToken } from '../src/server/auth/session';
+import { enumParam, normalizeQuery, safeCapacityUtilization, safePercent } from '../src/lib/safe-math';
+import { calculateRemainingWithdrawalEligibility, WITHDRAWAL_CONSUMING_STATUSES } from '../src/server/services/withdrawals';
 
 describe('financial allocation rules', () => {
   it('rejects allocations below minimum', () => {
@@ -31,6 +34,41 @@ describe('withdrawal rules', () => {
   });
   it('rejects withdrawal requests below minimum', () => {
     expect(canRequestWithdrawal('50', '1000', '100')).toBe(false);
+  });
+});
+
+
+
+describe('withdrawal entitlement accounting', () => {
+  const allocation = { currentValue: '2000', initialValue: '1000', totalDistributed: '0' };
+  it('deducts completed withdrawals from future eligibility', () => {
+    expect(calculateRemainingWithdrawalEligibility([allocation], [{ amount: '700', status: 'COMPLETED' }]).toString()).toBe('300');
+  });
+  it('reserves requested, under-review, approved, and processing withdrawals', () => {
+    for (const status of ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING'] as const) {
+      expect(calculateRemainingWithdrawalEligibility([allocation], [{ amount: '250', status }]).toString()).toBe('750');
+    }
+  });
+  it('does not deduct rejected or cancelled withdrawals', () => {
+    expect(calculateRemainingWithdrawalEligibility([allocation], [{ amount: '700', status: 'REJECTED' }]).toString()).toBe('1000');
+    expect(calculateRemainingWithdrawalEligibility([allocation], [{ amount: '700', status: 'CANCELLED' }]).toString()).toBe('1000');
+  });
+  it('never returns negative eligibility', () => {
+    expect(calculateRemainingWithdrawalEligibility([allocation], [{ amount: '1500', status: 'COMPLETED' }]).toString()).toBe('0');
+  });
+  it('centralizes the statuses that consume entitlement', () => {
+    expect(WITHDRAWAL_CONSUMING_STATUSES).toEqual(['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'COMPLETED']);
+  });
+  it('models concurrent withdrawal safety after the first transaction commits', () => {
+    const firstRemaining = calculateRemainingWithdrawalEligibility([allocation], [{ amount: '700', status: 'REQUESTED' }]);
+    expect(firstRemaining.toString()).toBe('300');
+    expect(canRequestWithdrawal('700', firstRemaining, '100')).toBe(false);
+  });
+  it('allows two serialized withdrawals that exactly consume entitlement', () => {
+    const afterFirst = calculateRemainingWithdrawalEligibility([allocation], [{ amount: '500', status: 'REQUESTED' }]);
+    expect(canRequestWithdrawal('500', afterFirst, '100')).toBe(true);
+    const afterSecond = calculateRemainingWithdrawalEligibility([allocation], [{ amount: '500', status: 'REQUESTED' }, { amount: '500', status: 'REQUESTED' }]);
+    expect(afterSecond.toString()).toBe('0');
   });
 });
 
@@ -93,5 +131,56 @@ describe('mock payment authorization helpers', () => {
   });
   it('constrains user mock payment lookup to the owning user and payment reference', () => {
     expect(userOwnedPaymentWhere('user_a', 'PAY-1')).toEqual({ paymentReference: 'PAY-1', userId: 'user_a' });
+  });
+});
+
+
+describe('session token verification', () => {
+  it('accepts valid signed tokens before expiration', () => {
+    process.env.AUTH_SECRET = 'test-secret';
+    const now = 1_700_000_000_000;
+    const token = createSessionToken('user_123', now);
+    expect(verifySessionToken(token, now + 1000)).toBe('user_123');
+  });
+  it('rejects invalid signatures and malformed tokens', () => {
+    process.env.AUTH_SECRET = 'test-secret';
+    const now = 1_700_000_000_000;
+    const token = createSessionToken('user_123', now);
+    const parts = token.split('.');
+    expect(verifySessionToken(`${parts[0]}.${parts[1]}.invalid`, now)).toBeNull();
+    expect(verifySessionToken('not-a-session', now)).toBeNull();
+  });
+  it('does not throw for unicode signatures with mismatched byte lengths', () => {
+    process.env.AUTH_SECRET = 'test-secret';
+    const now = 1_700_000_000_000;
+    expect(() => verifySessionToken(`user_123.${now}.😀😀😀`, now)).not.toThrow();
+    expect(verifySessionToken(`user_123.${now}.😀😀😀`, now)).toBeNull();
+  });
+  it('rejects expired and unreasonably future-dated tokens', () => {
+    process.env.AUTH_SECRET = 'test-secret';
+    const now = 1_700_000_000_000;
+    expect(verifySessionToken(createSessionToken('user_123', now - SESSION_MAX_AGE_MS - 1), now)).toBeNull();
+    expect(verifySessionToken(createSessionToken('user_123', now + 1000 * 60 * 6), now)).toBeNull();
+  });
+});
+
+describe('query normalization and safe percentages', () => {
+  it('normalizes empty query and enum values safely', () => {
+    expect(normalizeQuery('   ')).toBeUndefined();
+    expect(enumParam('', ['OPEN', 'CLOSED'] as const)).toBeUndefined();
+    expect(enumParam('BOGUS', ['OPEN', 'CLOSED'] as const)).toBeUndefined();
+    expect(enumParam('OPEN', ['OPEN', 'CLOSED'] as const)).toBe('OPEN');
+  });
+  it('does not emit NaN or Infinity for zero-capacity utilization', () => {
+    expect(safeCapacityUtilization(100, 0)).toBe(0);
+    expect(Number.isFinite(safePercent(100, 0))).toBe(true);
+  });
+  it('models the guarded capacity predicate used by payment completion', () => {
+    const capacity = 1000;
+    const current = 300;
+    const first = current + 700 <= capacity;
+    const secondAfterFirst = current + 700 + 700 <= capacity;
+    expect(first).toBe(true);
+    expect(secondAfterFirst).toBe(false);
   });
 });

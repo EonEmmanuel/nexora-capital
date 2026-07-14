@@ -3,6 +3,7 @@ import { prisma } from '@/server/db/prisma';
 import { completeMockPayment } from '@/server/services/allocation';
 import { assertMockPaymentControlsEnabled, isValidMockPaymentTransition } from '@/server/payments/mock-controls';
 import { requirePermission, type Permission, type Role } from '@/server/permissions/rbac';
+import { safeCapacityUtilization } from '@/lib/safe-math';
 
 export function assertAdmin(role: Role, permission: Permission) { requirePermission(role, permission); }
 export async function audit(actorId: string, action: string, entityType: string, entityId: string | null, description: string, metadata?: Prisma.InputJsonValue) { return prisma.auditLog.create({ data: { actorId, action, entityType, entityId: entityId ?? undefined, description, metadata } }); }
@@ -13,7 +14,7 @@ export async function getAdminOverview() {
   const activeCapital = activeAllocations.reduce((s, a) => s.plus(a.currentValue), new Prisma.Decimal(0));
   const completedPaymentVolume = completedPayments.reduce((s, p) => s.plus(p.receivedAmount ?? p.requestedAmount), new Prisma.Decimal(0));
   const withdrawalVolume = withdrawals.reduce((s, w) => s.plus(w.amount), new Prisma.Decimal(0));
-  const poolUtilization = pools.length ? pools.reduce((s, p) => s + Number(p.currentlyAllocated) / Number(p.totalCapacity), 0) / pools.length : 0;
+  const poolUtilization = pools.length ? pools.reduce((s, p) => s + safeCapacityUtilization(Number(p.currentlyAllocated), Number(p.totalCapacity)), 0) / pools.length : 0;
   return { totalUsers, activeUsers, totalAllocations, activeCapital, poolUtilization, pendingPayments, completedPaymentVolume, pendingWithdrawals, withdrawalVolume, openTickets, alerts, auditLogs, pools };
 }
 export async function savePool(actorId: string, role: Role, formData: FormData, id?: string) {

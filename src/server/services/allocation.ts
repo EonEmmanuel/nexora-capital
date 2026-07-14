@@ -32,12 +32,18 @@ export async function completeMockPayment(paymentReference: string, nextStatus: 
       return tx.payment.update({ where: { id: payment.id }, data: { status: nextStatus, confirmations: nextStatus === 'CONFIRMING' ? 1 : 0, receivedAmount: payment.requestedAmount } });
     }
     const ledgerReference = `TX-${payment.paymentReference}`;
-    const pool = await tx.tradingPool.findUniqueOrThrow({ where: { id: payment.allocation.poolId } });
-    if (pool.currentlyAllocated.plus(payment.requestedAmount).gt(pool.totalCapacity)) throw new Error('Payment would exceed remaining pool capacity.');
-    await tx.payment.update({ where: { id: payment.id }, data: { status: PaymentStatus.COMPLETED, confirmations: 3, receivedAmount: payment.requestedAmount, paidAt: new Date() } });
+    const paymentClaim = await tx.payment.updateMany({ where: { id: payment.id, status: { not: PaymentStatus.COMPLETED } }, data: { status: PaymentStatus.COMPLETED, confirmations: 3, receivedAmount: payment.requestedAmount, paidAt: new Date() } });
+    if (paymentClaim.count !== 1) return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    const capacityUpdateCount = await tx.$executeRaw`
+      UPDATE "TradingPool"
+      SET "currentlyAllocated" = "currentlyAllocated" + ${payment.requestedAmount},
+          "updatedAt" = NOW()
+      WHERE "id" = ${payment.allocation.poolId}
+        AND "currentlyAllocated" + ${payment.requestedAmount} <= "totalCapacity"
+    `;
+    if (capacityUpdateCount !== 1) throw new Error('Payment would exceed remaining pool capacity.');
     await tx.allocation.update({ where: { id: payment.allocationId! }, data: { status: AllocationStatus.ACTIVE, activatedAt: new Date(), currentValue: payment.requestedAmount } });
     await tx.transaction.upsert({ where: { reference: ledgerReference }, update: {}, create: { userId: payment.userId, allocationId: payment.allocationId, type: TransactionType.ALLOCATION, amount: payment.requestedAmount, currency: payment.currency, status: 'COMPLETED', reference: ledgerReference, description: `Activated allocation ${payment.allocation.reference}` } });
-    await tx.tradingPool.update({ where: { id: payment.allocation.poolId }, data: { currentlyAllocated: { increment: payment.requestedAmount } } });
     await tx.notification.create({ data: { userId: payment.userId, title: 'Allocation activated', message: `${payment.allocation.pool.name} is now active.`, type: 'SUCCESS', actionUrl: `/dashboard/pools/${payment.allocationId}` } });
     return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
   });
