@@ -1,0 +1,5 @@
+import { Decimal } from '@prisma/client/runtime/library';
+export function calculatePoolRemainingCapacity(total:Decimal.Value,allocated:Decimal.Value){return new Decimal(total).minus(allocated)}
+export function canAllocateToPool(input:{amount:Decimal.Value;minimum:Decimal.Value;maximum:Decimal.Value;capacity:Decimal.Value;allocated:Decimal.Value;status:string}){const amount=new Decimal(input.amount);if(input.status!=='OPEN')return {ok:false,reason:'Pool is not open'};if(amount.lt(input.minimum))return {ok:false,reason:'Allocation is below the pool minimum'};if(amount.gt(input.maximum))return {ok:false,reason:'Allocation exceeds the pool maximum'};if(amount.gt(calculatePoolRemainingCapacity(input.capacity,input.allocated)))return {ok:false,reason:'Allocation exceeds remaining pool capacity'};return {ok:true}}
+export function calculateWithdrawalFee(amount:Decimal.Value,feePercent:Decimal.Value){return new Decimal(amount).mul(feePercent).div(100)}
+export function canRequestWithdrawal(amount:Decimal.Value,eligible:Decimal.Value,minimum:Decimal.Value){const a=new Decimal(amount);return a.gte(minimum)&&a.lte(eligible)}
