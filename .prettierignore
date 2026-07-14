@@ -1,0 +1,11 @@
+.env
+.env.*
+.git
+.idea
+.next
+node_modules
+coverage
+dist
+*.tsbuildinfo
+public
+prisma/migrations

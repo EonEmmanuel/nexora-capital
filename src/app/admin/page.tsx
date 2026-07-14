@@ -1,2 +1,55 @@
-import { requireAuthorized } from '@/server/auth/session';import { getAdminOverview } from '@/server/services/admin';import { money } from '@/components/shared/format';import { AdminStatCard,StatusBadge } from '@/components/admin/AdminCards';
-export default async function Admin(){await requireAuthorized('audit.read');const d=await getAdminOverview();const stats=[['Total users',d.totalUsers],['Active users',d.activeUsers],['Allocations',d.totalAllocations],['Active capital',money(d.activeCapital.toString())],['Pool utilization',`${(d.poolUtilization*100).toFixed(1)}%`],['Pending payments',d.pendingPayments],['Completed payment volume',money(d.completedPaymentVolume.toString())],['Pending withdrawals',d.pendingWithdrawals],['Withdrawal volume',money(d.withdrawalVolume.toString())],['Open tickets',d.openTickets]];return <section><span className="badge">Operations overview</span><h1>Fintech operations console</h1><div className="grid" style={{gridTemplateColumns:'repeat(5,1fr)'}}>{stats.map(([l,v])=><AdminStatCard key={String(l)} label={String(l)} value={String(v)}/>)}</div><div className="grid" style={{gridTemplateColumns:'1fr 1fr',marginTop:24}}><div className="card" style={{padding:24}}><h2>Pool distribution</h2>{d.pools.map(p=><p key={p.id}>{p.name} <StatusBadge status={p.status}/> {money(p.currentlyAllocated.toString(),p.baseCurrency)}</p>)}</div><div className="card" style={{padding:24}}><h2>Recent admin activity</h2>{d.auditLogs.map(a=><p key={a.id}><b>{a.action}</b><br/><span className="muted">{a.description}</span></p>)}</div></div></section>}
+import { requireAuthorized } from "@/server/auth/session";
+import { getAdminOverview } from "@/server/services/admin";
+import { money } from "@/components/shared/format";
+import { AdminStatCard, StatusBadge } from "@/components/admin/AdminCards";
+export default async function Admin() {
+  await requireAuthorized("audit.read");
+  const d = await getAdminOverview();
+  const stats = [
+    ["Total users", d.totalUsers],
+    ["Active users", d.activeUsers],
+    ["Allocations", d.totalAllocations],
+    ["Active capital", money(d.activeCapital.toString())],
+    ["Pool utilization", `${(d.poolUtilization * 100).toFixed(1)}%`],
+    ["Pending payments", d.pendingPayments],
+    ["Completed payment volume", money(d.completedPaymentVolume.toString())],
+    ["Pending withdrawals", d.pendingWithdrawals],
+    ["Withdrawal volume", money(d.withdrawalVolume.toString())],
+    ["Open tickets", d.openTickets],
+  ];
+  return (
+    <section>
+      <span className="badge">Operations overview</span>
+      <h1>Fintech operations console</h1>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
+        {stats.map(([l, v]) => (
+          <AdminStatCard key={String(l)} label={String(l)} value={String(v)} />
+        ))}
+      </div>
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: "1fr 1fr", marginTop: 24 }}
+      >
+        <div className="card" style={{ padding: 24 }}>
+          <h2>Pool distribution</h2>
+          {d.pools.map((p) => (
+            <p key={p.id}>
+              {p.name} <StatusBadge status={p.status} />{" "}
+              {money(p.currentlyAllocated.toString(), p.baseCurrency)}
+            </p>
+          ))}
+        </div>
+        <div className="card" style={{ padding: 24 }}>
+          <h2>Recent admin activity</h2>
+          {d.auditLogs.map((a) => (
+            <p key={a.id}>
+              <b>{a.action}</b>
+              <br />
+              <span className="muted">{a.description}</span>
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

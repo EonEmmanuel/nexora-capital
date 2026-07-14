@@ -1,4 +1,86 @@
-import { requireUser } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { money } from '@/components/shared/format';import { enumParam, normalizeQuery } from '@/lib/safe-math';
-const TRANSACTION_TYPES = ['ALLOCATION','WITHDRAWAL','PROFIT','FEE','ADJUSTMENT'] as const;
-const TRANSACTION_STATUSES = ['COMPLETED','PENDING','FAILED','UNDER_REVIEW'] as const;
-export default async function Transactions({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){const user=await requireUser();const sp=await searchParams;const q=normalizeQuery(sp.q);const type=enumParam(sp.type,TRANSACTION_TYPES);const status=enumParam(sp.status,TRANSACTION_STATUSES);const txs=await prisma.transaction.findMany({where:{userId:user.id,reference:q?{contains:q,mode:'insensitive'}:undefined,type,status},include:{allocation:{include:{pool:true}}},orderBy:{createdAt:'desc'},take:25});return <section><h1>Transaction history</h1><form className="card" style={{padding:14,display:'flex',gap:10,flexWrap:'wrap'}}><input name="q" placeholder="Search reference" defaultValue={q ?? ''}/><select name="type" defaultValue={type ?? ''}><option value="">All types</option><option>ALLOCATION</option><option>WITHDRAWAL</option><option>PROFIT</option></select><select name="status" defaultValue={status ?? ''}><option value="">All statuses</option><option>COMPLETED</option><option>PENDING</option></select><button className="btn btn-primary">Filter</button></form><table className="table"><thead><tr><th>Date</th><th>Reference</th><th>Type</th><th>Pool</th><th>Amount</th><th>Status</th></tr></thead><tbody>{txs.map(t=><tr key={t.id}><td>{t.createdAt.toLocaleDateString()}</td><td>{t.reference}</td><td>{t.type}</td><td>{t.allocation?.pool.name ?? '—'}</td><td>{money(t.amount.toString(),t.currency)}</td><td>{t.status}</td></tr>)}</tbody></table></section>}
+import { requireUser } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { money } from "@/components/shared/format";
+import { enumParam, normalizeQuery } from "@/lib/safe-math";
+const TRANSACTION_TYPES = [
+  "ALLOCATION",
+  "WITHDRAWAL",
+  "PROFIT",
+  "FEE",
+  "ADJUSTMENT",
+] as const;
+const TRANSACTION_STATUSES = [
+  "COMPLETED",
+  "PENDING",
+  "FAILED",
+  "UNDER_REVIEW",
+] as const;
+export default async function Transactions({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const user = await requireUser();
+  const sp = await searchParams;
+  const q = normalizeQuery(sp.q);
+  const type = enumParam(sp.type, TRANSACTION_TYPES);
+  const status = enumParam(sp.status, TRANSACTION_STATUSES);
+  const txs = await prisma.transaction.findMany({
+    where: {
+      userId: user.id,
+      reference: q ? { contains: q, mode: "insensitive" } : undefined,
+      type,
+      status,
+    },
+    include: { allocation: { include: { pool: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 25,
+  });
+  return (
+    <section>
+      <h1>Transaction history</h1>
+      <form
+        className="card"
+        style={{ padding: 14, display: "flex", gap: 10, flexWrap: "wrap" }}
+      >
+        <input name="q" placeholder="Search reference" defaultValue={q ?? ""} />
+        <select name="type" defaultValue={type ?? ""}>
+          <option value="">All types</option>
+          <option>ALLOCATION</option>
+          <option>WITHDRAWAL</option>
+          <option>PROFIT</option>
+        </select>
+        <select name="status" defaultValue={status ?? ""}>
+          <option value="">All statuses</option>
+          <option>COMPLETED</option>
+          <option>PENDING</option>
+        </select>
+        <button className="btn btn-primary">Filter</button>
+      </form>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reference</th>
+            <th>Type</th>
+            <th>Pool</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {txs.map((t) => (
+            <tr key={t.id}>
+              <td>{t.createdAt.toLocaleDateString()}</td>
+              <td>{t.reference}</td>
+              <td>{t.type}</td>
+              <td>{t.allocation?.pool.name ?? "—"}</td>
+              <td>{money(t.amount.toString(), t.currency)}</td>
+              <td>{t.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}

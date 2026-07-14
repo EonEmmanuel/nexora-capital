@@ -1,2 +1,17 @@
-import { requireUser } from '@/server/auth/session';
-export default async function SettingsPage(){const user=await requireUser();return <section><span className="badge">Settings</span><h1>Security</h1><div className="card" style={{padding:24}}><p className="muted">Account: {user.email}</p><p>This security settings surface is persisted-account ready and prepared for profile, security, notification, and preference mutations.</p></div></section>}
+import { requireUser } from "@/server/auth/session";
+export default async function SettingsPage() {
+  const user = await requireUser();
+  return (
+    <section>
+      <span className="badge">Settings</span>
+      <h1>Security</h1>
+      <div className="card" style={{ padding: 24 }}>
+        <p className="muted">Account: {user.email}</p>
+        <p>
+          This security settings surface is persisted-account ready and prepared
+          for profile, security, notification, and preference mutations.
+        </p>
+      </div>
+    </section>
+  );
+}

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "db:format": "prisma format",
     "db:validate": "prisma validate",
@@ -39,10 +41,12 @@
     "@types/react-dom": "19.1.6",
     "eslint": "9.29.0",
     "eslint-config-next": "15.3.4",
+    "prettier": "^3.9.5",
     "prisma": "6.10.1",
     "tailwindcss": "4.1.10",
     "tsx": "4.20.3",
     "typescript": "5.8.3",
+    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "3.2.4"
   }
 }

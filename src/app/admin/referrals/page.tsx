@@ -1,2 +1,50 @@
-import { requireAuthorized } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { money } from '@/components/shared/format';
-export default async function Referrals(){await requireAuthorized('referrals.read');const refs=await prisma.referral.findMany({orderBy:{createdAt:'desc'},take:100});const users=await prisma.user.findMany({where:{id:{in:[...refs.map(r=>r.referrerId),...refs.map(r=>r.referredUserId)]}}});const byId=new Map(users.map(u=>[u.id,u]));return <section><h1>Referral administration</h1><table className="table"><thead><tr><th>Referrer</th><th>Referred</th><th>Conversion</th><th>Reward</th><th>Status</th><th>Created</th></tr></thead><tbody>{refs.map(r=><tr key={r.id}><td>{byId.get(r.referrerId)?.email??r.referrerId}</td><td>{byId.get(r.referredUserId)?.email??r.referredUserId}</td><td>{r.conversionStatus}</td><td>{money(r.rewardAmount.toString())}</td><td>{r.rewardStatus}</td><td>{r.createdAt.toLocaleDateString()}</td></tr>)}</tbody></table></section>}
+import { requireAuthorized } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { money } from "@/components/shared/format";
+export default async function Referrals() {
+  await requireAuthorized("referrals.read");
+  const refs = await prisma.referral.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  const users = await prisma.user.findMany({
+    where: {
+      id: {
+        in: [
+          ...refs.map((r) => r.referrerId),
+          ...refs.map((r) => r.referredUserId),
+        ],
+      },
+    },
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+  return (
+    <section>
+      <h1>Referral administration</h1>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Referrer</th>
+            <th>Referred</th>
+            <th>Conversion</th>
+            <th>Reward</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {refs.map((r) => (
+            <tr key={r.id}>
+              <td>{byId.get(r.referrerId)?.email ?? r.referrerId}</td>
+              <td>{byId.get(r.referredUserId)?.email ?? r.referredUserId}</td>
+              <td>{r.conversionStatus}</td>
+              <td>{money(r.rewardAmount.toString())}</td>
+              <td>{r.rewardStatus}</td>
+              <td>{r.createdAt.toLocaleDateString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}

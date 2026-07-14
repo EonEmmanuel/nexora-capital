@@ -1,2 +1,39 @@
-import { markAllNotificationsRead } from '@/app/actions/notifications';
-export function NotificationMenu({notifications}:{notifications:{id:string;title:string;message:string;read:boolean;createdAt:Date}[]}){const unread=notifications.filter(n=>!n.read).length;return <details className="card" style={{padding:10,position:'relative'}}><summary>Notifications {unread>0&&<span className="badge">{unread}</span>}</summary><div style={{minWidth:320,padding:12}}>{notifications.length===0?<p className="muted">No notifications yet.</p>:notifications.map(n=><article key={n.id} style={{borderBottom:'1px solid #1d3045',padding:'10px 0'}}><b>{n.title}</b><p className="muted">{n.message}</p></article>)}<form action={markAllNotificationsRead}><button className="btn btn-ghost">Mark all read</button></form></div></details>}
+import { markAllNotificationsRead } from "@/app/actions/notifications";
+export function NotificationMenu({
+  notifications,
+}: {
+  notifications: {
+    id: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: Date;
+  }[];
+}) {
+  const unread = notifications.filter((n) => !n.read).length;
+  return (
+    <details className="card" style={{ padding: 10, position: "relative" }}>
+      <summary>
+        Notifications {unread > 0 && <span className="badge">{unread}</span>}
+      </summary>
+      <div style={{ minWidth: 320, padding: 12 }}>
+        {notifications.length === 0 ? (
+          <p className="muted">No notifications yet.</p>
+        ) : (
+          notifications.map((n) => (
+            <article
+              key={n.id}
+              style={{ borderBottom: "1px solid #1d3045", padding: "10px 0" }}
+            >
+              <b>{n.title}</b>
+              <p className="muted">{n.message}</p>
+            </article>
+          ))
+        )}
+        <form action={markAllNotificationsRead}>
+          <button className="btn btn-ghost">Mark all read</button>
+        </form>
+      </div>
+    </details>
+  );
+}

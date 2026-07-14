@@ -1,2 +1,68 @@
-import { requireAuthorized } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { money } from '@/components/shared/format';import { adminPaymentAction } from '@/app/actions/admin';
-export default async function Payments(){await requireAuthorized('payments.read');const rows=await prisma.payment.findMany({include:{user:true,allocation:true},orderBy:{createdAt:'desc'},take:100});return <section><h1>Payment operations</h1><table className="table"><thead><tr><th>Reference</th><th>User</th><th>Allocation</th><th>Requested</th><th>Received</th><th>Asset</th><th>Network</th><th>Status</th><th>Mock actions</th></tr></thead><tbody>{rows.map(p=><tr key={p.id}><td>{p.paymentReference}</td><td>{p.user.email}</td><td>{p.allocation?.reference??'—'}</td><td>{money(p.requestedAmount.toString(),p.currency)}</td><td>{p.receivedAmount?money(p.receivedAmount.toString(),p.currency):'—'}</td><td>{p.currency}</td><td>{p.network}</td><td>{p.status}</td><td><form action={adminPaymentAction.bind(null,p.paymentReference)}><button name="status" value="DETECTED">Detected</button><button name="status" value="CONFIRMING">Confirming</button><button name="status" value="COMPLETED">Complete</button><button name="status" value="UNDER_REVIEW">Review</button></form></td></tr>)}</tbody></table></section>}
+import { requireAuthorized } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { money } from "@/components/shared/format";
+import { adminPaymentAction } from "@/app/actions/admin";
+export default async function Payments() {
+  await requireAuthorized("payments.read");
+  const rows = await prisma.payment.findMany({
+    include: { user: true, allocation: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  return (
+    <section>
+      <h1>Payment operations</h1>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>User</th>
+            <th>Allocation</th>
+            <th>Requested</th>
+            <th>Received</th>
+            <th>Asset</th>
+            <th>Network</th>
+            <th>Status</th>
+            <th>Mock actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((p) => (
+            <tr key={p.id}>
+              <td>{p.paymentReference}</td>
+              <td>{p.user.email}</td>
+              <td>{p.allocation?.reference ?? "—"}</td>
+              <td>{money(p.requestedAmount.toString(), p.currency)}</td>
+              <td>
+                {p.receivedAmount
+                  ? money(p.receivedAmount.toString(), p.currency)
+                  : "—"}
+              </td>
+              <td>{p.currency}</td>
+              <td>{p.network}</td>
+              <td>{p.status}</td>
+              <td>
+                <form
+                  action={adminPaymentAction.bind(null, p.paymentReference)}
+                >
+                  <button name="status" value="DETECTED">
+                    Detected
+                  </button>
+                  <button name="status" value="CONFIRMING">
+                    Confirming
+                  </button>
+                  <button name="status" value="COMPLETED">
+                    Complete
+                  </button>
+                  <button name="status" value="UNDER_REVIEW">
+                    Review
+                  </button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}

@@ -1,3 +1,49 @@
-import Link from 'next/link';import { signOutAction } from '@/app/actions/auth';import { NotificationMenu } from '@/components/dashboard/NotificationMenu';import { prisma } from '@/server/db/prisma';
-const nav=[['/dashboard','Overview'],['/dashboard/pools','My Pools'],['/pools','Explore'],['/dashboard/transactions','Transactions'],['/dashboard/withdrawals','Withdrawals'],['/dashboard/referrals','Referrals'],['/dashboard/support','Support'],['/dashboard/settings/profile','Settings']];
-export async function DashboardShell({userId,children}:{userId:string;children:React.ReactNode}){const notifications=await prisma.notification.findMany({where:{userId},orderBy:{createdAt:'desc'},take:8});return <div className="app-shell"><aside className="sidebar"><h2>Nexora</h2>{nav.map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</aside><main className="workspace"><header className="topbar"><span className="muted">Financial command center</span><NotificationMenu notifications={notifications}/><form action={signOutAction}><button className="btn btn-ghost">Sign out</button></form></header>{children}</main></div>}
+import Link from "next/link";
+import { signOutAction } from "@/app/actions/auth";
+import { NotificationMenu } from "@/components/dashboard/NotificationMenu";
+import { prisma } from "@/server/db/prisma";
+const nav = [
+  ["/dashboard", "Overview"],
+  ["/dashboard/pools", "My Pools"],
+  ["/pools", "Explore"],
+  ["/dashboard/transactions", "Transactions"],
+  ["/dashboard/withdrawals", "Withdrawals"],
+  ["/dashboard/referrals", "Referrals"],
+  ["/dashboard/support", "Support"],
+  ["/dashboard/settings/profile", "Settings"],
+];
+export async function DashboardShell({
+  userId,
+  children,
+}: {
+  userId: string;
+  children: React.ReactNode;
+}) {
+  const notifications = await prisma.notification.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+  });
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <h2>Nexora</h2>
+        {nav.map(([href, label]) => (
+          <Link key={href} href={href}>
+            {label}
+          </Link>
+        ))}
+      </aside>
+      <main className="workspace">
+        <header className="topbar">
+          <span className="muted">Financial command center</span>
+          <NotificationMenu notifications={notifications} />
+          <form action={signOutAction}>
+            <button className="btn btn-ghost">Sign out</button>
+          </form>
+        </header>
+        {children}
+      </main>
+    </div>
+  );
+}

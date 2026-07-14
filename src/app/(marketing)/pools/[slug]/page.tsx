@@ -1,2 +1,86 @@
-import { notFound } from 'next/navigation';import Link from 'next/link';import { pools,performance } from '@/features/pools/data';import { money,pct } from '@/components/shared/format';import { safePercent } from '@/lib/safe-math';import { brand } from '@/config/brand';
-export function generateStaticParams(){return pools.map(p=>({slug:p.slug}))}export default async function PoolDetail({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const pool=pools.find(p=>p.slug===slug);if(!pool)notFound();const used=safePercent(pool.allocated,pool.capacity);return <main className="container" style={{paddingTop:56}}><section className="card" style={{padding:34}}><span className="badge">{pool.status} • {pool.risk}</span><h1 style={{fontSize:56}}>{pool.name}</h1><p className="muted" style={{fontSize:20}}>{pool.description}</p><div className="grid pool-metrics" style={{gridTemplateColumns:'repeat(4,1fr)'}}><b>{money(pool.min)}</b><b>{pool.duration}</b><b>{pct(pool.historical)}</b><b>{used.toFixed(0)}%</b><span className="muted">Minimum</span><span className="muted">Duration</span><span className="muted">Historical return</span><span className="muted">Capacity used</span></div><br/><Link href={`/checkout/${pool.slug}`} className="btn btn-primary">Start allocation</Link></section><section className="grid pool-detail-grid" style={{gridTemplateColumns:'1.3fr .7fr',marginTop:24}}><div className="card" style={{padding:24}}><h2>Performance summary</h2><svg viewBox="0 0 700 260" width="100%">{performance.map((p,i)=><circle key={p.m} cx={60+i*100} cy={230-(p.v-95)*8} r="5" fill="#2ff2a0"/>)}<polyline points={performance.map((p,i)=>`${60+i*100},${230-(p.v-95)*8}`).join(' ')} fill="none" stroke="#2ff2a0" strokeWidth="4"/></svg><p className="muted">Time ranges: 7D · 1M · 3M · 6M · 1Y · ALL. Demo data is deterministic seed-ready data.</p></div><aside className="card" style={{padding:24}}><h2>Pool terms</h2><p>{pool.strategy}</p><p className="muted">Fees: {pool.fee}</p><p className="muted">{brand.riskDisclosure}</p></aside></section></main>}
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { pools, performance } from "@/features/pools/data";
+import { money, pct } from "@/components/shared/format";
+import { safePercent } from "@/lib/safe-math";
+import { brand } from "@/config/brand";
+export function generateStaticParams() {
+  return pools.map((p) => ({ slug: p.slug }));
+}
+export default async function PoolDetail({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const pool = pools.find((p) => p.slug === slug);
+  if (!pool) notFound();
+  const used = safePercent(pool.allocated, pool.capacity);
+  return (
+    <main className="container" style={{ paddingTop: 56 }}>
+      <section className="card" style={{ padding: 34 }}>
+        <span className="badge">
+          {pool.status} • {pool.risk}
+        </span>
+        <h1 style={{ fontSize: 56 }}>{pool.name}</h1>
+        <p className="muted" style={{ fontSize: 20 }}>
+          {pool.description}
+        </p>
+        <div
+          className="grid pool-metrics"
+          style={{ gridTemplateColumns: "repeat(4,1fr)" }}
+        >
+          <b>{money(pool.min)}</b>
+          <b>{pool.duration}</b>
+          <b>{pct(pool.historical)}</b>
+          <b>{used.toFixed(0)}%</b>
+          <span className="muted">Minimum</span>
+          <span className="muted">Duration</span>
+          <span className="muted">Historical return</span>
+          <span className="muted">Capacity used</span>
+        </div>
+        <br />
+        <Link href={`/checkout/${pool.slug}`} className="btn btn-primary">
+          Start allocation
+        </Link>
+      </section>
+      <section
+        className="grid pool-detail-grid"
+        style={{ gridTemplateColumns: "1.3fr .7fr", marginTop: 24 }}
+      >
+        <div className="card" style={{ padding: 24 }}>
+          <h2>Performance summary</h2>
+          <svg viewBox="0 0 700 260" width="100%">
+            {performance.map((p, i) => (
+              <circle
+                key={p.m}
+                cx={60 + i * 100}
+                cy={230 - (p.v - 95) * 8}
+                r="5"
+                fill="#2ff2a0"
+              />
+            ))}
+            <polyline
+              points={performance
+                .map((p, i) => `${60 + i * 100},${230 - (p.v - 95) * 8}`)
+                .join(" ")}
+              fill="none"
+              stroke="#2ff2a0"
+              strokeWidth="4"
+            />
+          </svg>
+          <p className="muted">
+            Time ranges: 7D · 1M · 3M · 6M · 1Y · ALL. Demo data is
+            deterministic seed-ready data.
+          </p>
+        </div>
+        <aside className="card" style={{ padding: 24 }}>
+          <h2>Pool terms</h2>
+          <p>{pool.strategy}</p>
+          <p className="muted">Fees: {pool.fee}</p>
+          <p className="muted">{brand.riskDisclosure}</p>
+        </aside>
+      </section>
+    </main>
+  );
+}

@@ -1,2 +1,50 @@
-import Link from 'next/link';import { requireUser } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { money } from '@/components/shared/format';
-export default async function MyPools(){const user=await requireUser();const allocations=await prisma.allocation.findMany({where:{userId:user.id},include:{pool:true},orderBy:{createdAt:'desc'}});const tabs=['All','Active','Pending','Matured','Closed'];return <section><h1>My pools</h1><p>{tabs.map(t=><span className="badge" key={t}>{t}</span>)}</p><div className="grid">{allocations.length?allocations.map(a=><Link className="card" style={{padding:22,textDecoration:'none',color:'white'}} href={`/dashboard/pools/${a.id}`} key={a.id}><b>{a.pool.name}</b><p className="muted">{a.reference} • {a.status}</p><p>{money(a.initialValue.toString(),a.currency)} → {money(a.currentValue.toString(),a.currency)}</p></Link>):<div className="card" style={{padding:24}}>No allocations yet.</div>}</div></section>}
+import Link from "next/link";
+import { requireUser } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { money } from "@/components/shared/format";
+export default async function MyPools() {
+  const user = await requireUser();
+  const allocations = await prisma.allocation.findMany({
+    where: { userId: user.id },
+    include: { pool: true },
+    orderBy: { createdAt: "desc" },
+  });
+  const tabs = ["All", "Active", "Pending", "Matured", "Closed"];
+  return (
+    <section>
+      <h1>My pools</h1>
+      <p>
+        {tabs.map((t) => (
+          <span className="badge" key={t}>
+            {t}
+          </span>
+        ))}
+      </p>
+      <div className="grid">
+        {allocations.length ? (
+          allocations.map((a) => (
+            <Link
+              className="card"
+              style={{ padding: 22, textDecoration: "none", color: "white" }}
+              href={`/dashboard/pools/${a.id}`}
+              key={a.id}
+            >
+              <b>{a.pool.name}</b>
+              <p className="muted">
+                {a.reference} • {a.status}
+              </p>
+              <p>
+                {money(a.initialValue.toString(), a.currency)} →{" "}
+                {money(a.currentValue.toString(), a.currency)}
+              </p>
+            </Link>
+          ))
+        ) : (
+          <div className="card" style={{ padding: 24 }}>
+            No allocations yet.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

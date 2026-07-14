@@ -1,2 +1,42 @@
-import Link from 'next/link';import { requireAuthorized } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';
-export default async function AdminSupport(){await requireAuthorized('support.read');const tickets=await prisma.supportTicket.findMany({include:{user:true,messages:true},orderBy:{updatedAt:'desc'},take:100});return <section><h1>Support queue</h1><table className="table"><thead><tr><th>Subject</th><th>User</th><th>Category</th><th>Priority</th><th>Status</th><th>Messages</th></tr></thead><tbody>{tickets.map(t=><tr key={t.id}><td><Link href={`/admin/support/${t.id}`}>{t.subject}</Link></td><td>{t.user.email}</td><td>{t.category}</td><td>{t.priority}</td><td>{t.status}</td><td>{t.messages.length}</td></tr>)}</tbody></table></section>}
+import Link from "next/link";
+import { requireAuthorized } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+export default async function AdminSupport() {
+  await requireAuthorized("support.read");
+  const tickets = await prisma.supportTicket.findMany({
+    include: { user: true, messages: true },
+    orderBy: { updatedAt: "desc" },
+    take: 100,
+  });
+  return (
+    <section>
+      <h1>Support queue</h1>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>User</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Messages</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tickets.map((t) => (
+            <tr key={t.id}>
+              <td>
+                <Link href={`/admin/support/${t.id}`}>{t.subject}</Link>
+              </td>
+              <td>{t.user.email}</td>
+              <td>{t.category}</td>
+              <td>{t.priority}</td>
+              <td>{t.status}</td>
+              <td>{t.messages.length}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}

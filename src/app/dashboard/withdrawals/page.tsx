@@ -1,2 +1,71 @@
-import { requireUser } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { getEligibleWithdrawalAmount } from '@/server/services/withdrawals';import { requestWithdrawalAction } from '@/app/actions/withdrawals';import { money } from '@/components/shared/format';
-export default async function Withdrawals(){const user=await requireUser();const [eligible,withdrawals,allocations]=await Promise.all([getEligibleWithdrawalAmount(user.id),prisma.withdrawal.findMany({where:{userId:user.id},orderBy:{createdAt:'desc'}}),prisma.allocation.findMany({where:{userId:user.id,status:'ACTIVE'},include:{pool:true}})]);return <section><h1>Withdrawals</h1><div className="card" style={{padding:24}}><p className="muted">Eligible amount</p><h2>{money(eligible.toString())}</h2></div><form action={requestWithdrawalAction} className="card grid" style={{padding:24,marginTop:24}}><h2>Request withdrawal</h2><select name="allocationId"><option value="">Platform balance</option>{allocations.map(a=><option value={a.id} key={a.id}>{a.pool.name}</option>)}</select><input name="amount" placeholder="Amount"/><select name="currency"><option>USDT</option><option>USDC</option></select><select name="network"><option>TRON</option><option>Ethereum</option><option>Polygon</option></select><input name="destinationAddress" placeholder="Destination wallet address"/><button className="btn btn-primary">Submit for review</button></form><h2>History</h2><table className="table"><tbody>{withdrawals.map(w=><tr key={w.id}><td>{w.reference}</td><td>{money(w.amount.toString(),w.currency)}</td><td>{w.network}</td><td>{w.status}</td></tr>)}</tbody></table></section>}
+import { requireUser } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { getEligibleWithdrawalAmount } from "@/server/services/withdrawals";
+import { requestWithdrawalAction } from "@/app/actions/withdrawals";
+import { money } from "@/components/shared/format";
+export default async function Withdrawals() {
+  const user = await requireUser();
+  const [eligible, withdrawals, allocations] = await Promise.all([
+    getEligibleWithdrawalAmount(user.id),
+    prisma.withdrawal.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.allocation.findMany({
+      where: { userId: user.id, status: "ACTIVE" },
+      include: { pool: true },
+    }),
+  ]);
+  return (
+    <section>
+      <h1>Withdrawals</h1>
+      <div className="card" style={{ padding: 24 }}>
+        <p className="muted">Eligible amount</p>
+        <h2>{money(eligible.toString())}</h2>
+      </div>
+      <form
+        action={requestWithdrawalAction}
+        className="card grid"
+        style={{ padding: 24, marginTop: 24 }}
+      >
+        <h2>Request withdrawal</h2>
+        <select name="allocationId">
+          <option value="">Platform balance</option>
+          {allocations.map((a) => (
+            <option value={a.id} key={a.id}>
+              {a.pool.name}
+            </option>
+          ))}
+        </select>
+        <input name="amount" placeholder="Amount" />
+        <select name="currency">
+          <option>USDT</option>
+          <option>USDC</option>
+        </select>
+        <select name="network">
+          <option>TRON</option>
+          <option>Ethereum</option>
+          <option>Polygon</option>
+        </select>
+        <input
+          name="destinationAddress"
+          placeholder="Destination wallet address"
+        />
+        <button className="btn btn-primary">Submit for review</button>
+      </form>
+      <h2>History</h2>
+      <table className="table">
+        <tbody>
+          {withdrawals.map((w) => (
+            <tr key={w.id}>
+              <td>{w.reference}</td>
+              <td>{money(w.amount.toString(), w.currency)}</td>
+              <td>{w.network}</td>
+              <td>{w.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}

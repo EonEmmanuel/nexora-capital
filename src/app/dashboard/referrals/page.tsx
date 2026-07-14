@@ -1,2 +1,40 @@
-import { requireUser } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';
-export default async function Referrals(){const user=await requireUser();const refs=await prisma.referral.findMany({where:{referrerId:user.id},orderBy:{createdAt:'desc'}});const url=`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/auth/sign-up?ref=${user.referralCode}`;return <section><h1>Referrals</h1><div className="card" style={{padding:24}}><p className="muted">Your unique referral link</p><code>{url}</code><p className="muted">Reward rules are configurable and never guarantee returns.</p></div><div className="grid" style={{gridTemplateColumns:'repeat(3,1fr)',marginTop:24}}><div className="card" style={{padding:18}}>Total referrals <h2>{refs.length}</h2></div><div className="card" style={{padding:18}}>Qualified <h2>{refs.filter(r=>r.conversionStatus==='QUALIFIED').length}</h2></div><div className="card" style={{padding:18}}>Pending rewards <h2>{refs.filter(r=>r.rewardStatus==='PENDING').length}</h2></div></div></section>}
+import { requireUser } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+export default async function Referrals() {
+  const user = await requireUser();
+  const refs = await prisma.referral.findMany({
+    where: { referrerId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/sign-up?ref=${user.referralCode}`;
+  return (
+    <section>
+      <h1>Referrals</h1>
+      <div className="card" style={{ padding: 24 }}>
+        <p className="muted">Your unique referral link</p>
+        <code>{url}</code>
+        <p className="muted">
+          Reward rules are configurable and never guarantee returns.
+        </p>
+      </div>
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: "repeat(3,1fr)", marginTop: 24 }}
+      >
+        <div className="card" style={{ padding: 18 }}>
+          Total referrals <h2>{refs.length}</h2>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          Qualified{" "}
+          <h2>
+            {refs.filter((r) => r.conversionStatus === "QUALIFIED").length}
+          </h2>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          Pending rewards{" "}
+          <h2>{refs.filter((r) => r.rewardStatus === "PENDING").length}</h2>
+        </div>
+      </div>
+    </section>
+  );
+}

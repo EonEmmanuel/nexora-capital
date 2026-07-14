@@ -1,3 +1,53 @@
-import { requireAuthorized } from '@/server/auth/session';import { savePoolAction } from '@/app/actions/admin';
-export default async function NewPool(){await requireAuthorized('pools.create');return <PoolForm />}
-function PoolForm(){return <section><h1>Create pool</h1><form action={savePoolAction.bind(null,undefined)} className="card grid" style={{padding:24}}><input name="name" placeholder="Name"/><input name="slug" placeholder="slug"/><input name="shortDescription" placeholder="Short description"/><textarea name="fullDescription" placeholder="Full description"/><textarea name="strategyDescription" placeholder="Strategy"/><select name="riskLevel"><option>CONSERVATIVE</option><option>MODERATE</option><option>BALANCED</option><option>AGGRESSIVE</option><option>HIGH_RISK</option></select><input name="baseCurrency" defaultValue="USDT"/><input name="minimumAllocation" placeholder="Minimum"/><input name="maximumAllocation" placeholder="Maximum"/><input name="totalCapacity" placeholder="Capacity"/><input name="managementFeePercent" placeholder="Management fee"/><input name="performanceFeePercent" placeholder="Performance fee"/><label><input type="checkbox" name="flexibleDuration"/> Flexible duration</label><input name="durationDays" placeholder="Duration days"/><input name="heroImage" placeholder="Hero image URL"/><input name="icon" placeholder="Icon"/><label><input type="checkbox" name="featured"/> Featured</label><input name="displayOrder" defaultValue="0"/><select name="status"><option>DRAFT</option><option>UPCOMING</option><option>OPEN</option></select><button className="btn btn-primary">Save pool</button></form></section>}
+import { requireAuthorized } from "@/server/auth/session";
+import { savePoolAction } from "@/app/actions/admin";
+export default async function NewPool() {
+  await requireAuthorized("pools.create");
+  return <PoolForm />;
+}
+function PoolForm() {
+  return (
+    <section>
+      <h1>Create pool</h1>
+      <form
+        action={savePoolAction.bind(null, undefined)}
+        className="card grid"
+        style={{ padding: 24 }}
+      >
+        <input name="name" placeholder="Name" />
+        <input name="slug" placeholder="slug" />
+        <input name="shortDescription" placeholder="Short description" />
+        <textarea name="fullDescription" placeholder="Full description" />
+        <textarea name="strategyDescription" placeholder="Strategy" />
+        <select name="riskLevel">
+          <option>CONSERVATIVE</option>
+          <option>MODERATE</option>
+          <option>BALANCED</option>
+          <option>AGGRESSIVE</option>
+          <option>HIGH_RISK</option>
+        </select>
+        <input name="baseCurrency" defaultValue="USDT" />
+        <input name="minimumAllocation" placeholder="Minimum" />
+        <input name="maximumAllocation" placeholder="Maximum" />
+        <input name="totalCapacity" placeholder="Capacity" />
+        <input name="managementFeePercent" placeholder="Management fee" />
+        <input name="performanceFeePercent" placeholder="Performance fee" />
+        <label>
+          <input type="checkbox" name="flexibleDuration" /> Flexible duration
+        </label>
+        <input name="durationDays" placeholder="Duration days" />
+        <input name="heroImage" placeholder="Hero image URL" />
+        <input name="icon" placeholder="Icon" />
+        <label>
+          <input type="checkbox" name="featured" /> Featured
+        </label>
+        <input name="displayOrder" defaultValue="0" />
+        <select name="status">
+          <option>DRAFT</option>
+          <option>UPCOMING</option>
+          <option>OPEN</option>
+        </select>
+        <button className="btn btn-primary">Save pool</button>
+      </form>
+    </section>
+  );
+}

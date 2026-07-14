@@ -1,2 +1,62 @@
-import { notFound } from 'next/navigation';import { pools } from '@/features/pools/data';import { money } from '@/components/shared/format';import { createAllocationAction } from '@/app/actions/checkout';import { requireUser } from '@/server/auth/session';
-export default async function Checkout({params}:{params:Promise<{poolSlug:string}>}){await requireUser();const {poolSlug}=await params;const pool=pools.find(p=>p.slug===poolSlug);if(!pool)notFound();return <main className="container" style={{paddingTop:48}}><span className="badge">Secure checkout</span><h1>Allocate to {pool.name}</h1><form action={createAllocationAction.bind(null,pool.slug)} className="grid" style={{gridTemplateColumns:'1fr 1fr'}}><section className="card" style={{padding:24}}><h2>1. Select amount</h2><p className="muted">Minimum {money(pool.min)} • Maximum {money(pool.max)}</p><input name="amount" defaultValue={pool.min} style={{width:'100%',padding:16}}/><h2>2. Select payment asset</h2><select name="currency" defaultValue="USDT"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select><select name="network" defaultValue="TRON"><option>TRON</option><option>Ethereum</option><option>Polygon</option><option>BNB Smart Chain</option></select></section><aside className="card" style={{padding:24}}><h2>Review terms</h2><p>{pool.strategy}</p><p className="muted">Server validates status, minimum, maximum, account eligibility, and remaining capacity using Prisma Decimal rules.</p><button className="btn btn-primary">Create allocation and payment intent</button></aside></form></main>}
+import { notFound } from "next/navigation";
+import { pools } from "@/features/pools/data";
+import { money } from "@/components/shared/format";
+import { createAllocationAction } from "@/app/actions/checkout";
+import { requireUser } from "@/server/auth/session";
+export default async function Checkout({
+  params,
+}: {
+  params: Promise<{ poolSlug: string }>;
+}) {
+  await requireUser();
+  const { poolSlug } = await params;
+  const pool = pools.find((p) => p.slug === poolSlug);
+  if (!pool) notFound();
+  return (
+    <main className="container" style={{ paddingTop: 48 }}>
+      <span className="badge">Secure checkout</span>
+      <h1>Allocate to {pool.name}</h1>
+      <form
+        action={createAllocationAction.bind(null, pool.slug)}
+        className="grid"
+        style={{ gridTemplateColumns: "1fr 1fr" }}
+      >
+        <section className="card" style={{ padding: 24 }}>
+          <h2>1. Select amount</h2>
+          <p className="muted">
+            Minimum {money(pool.min)} • Maximum {money(pool.max)}
+          </p>
+          <input
+            name="amount"
+            defaultValue={pool.min}
+            style={{ width: "100%", padding: 16 }}
+          />
+          <h2>2. Select payment asset</h2>
+          <select name="currency" defaultValue="USDT">
+            <option>USDT</option>
+            <option>USDC</option>
+            <option>BTC</option>
+            <option>ETH</option>
+          </select>
+          <select name="network" defaultValue="TRON">
+            <option>TRON</option>
+            <option>Ethereum</option>
+            <option>Polygon</option>
+            <option>BNB Smart Chain</option>
+          </select>
+        </section>
+        <aside className="card" style={{ padding: 24 }}>
+          <h2>Review terms</h2>
+          <p>{pool.strategy}</p>
+          <p className="muted">
+            Server validates status, minimum, maximum, account eligibility, and
+            remaining capacity using Prisma Decimal rules.
+          </p>
+          <button className="btn btn-primary">
+            Create allocation and payment intent
+          </button>
+        </aside>
+      </form>
+    </main>
+  );
+}

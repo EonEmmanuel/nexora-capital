@@ -1,2 +1,24 @@
-import Link from 'next/link';import { brand } from '@/config/brand';
-export default function AuthLayout({children}:{children:React.ReactNode}){return <main className="container" style={{minHeight:'100vh',display:'grid',placeItems:'center'}}><div style={{width:'100%',maxWidth:480}}><Link href="/" style={{color:'white',textDecoration:'none',fontWeight:900}}>{brand.companyName}</Link>{children}</div></main>}
+import Link from "next/link";
+import { brand } from "@/config/brand";
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <main
+      className="container"
+      style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}
+    >
+      <div style={{ width: "100%", maxWidth: 480 }}>
+        <Link
+          href="/"
+          style={{ color: "white", textDecoration: "none", fontWeight: 900 }}
+        >
+          {brand.companyName}
+        </Link>
+        {children}
+      </div>
+    </main>
+  );
+}

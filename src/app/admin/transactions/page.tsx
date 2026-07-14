@@ -1,2 +1,42 @@
-import { requireAuthorized } from '@/server/auth/session';import { prisma } from '@/server/db/prisma';import { money } from '@/components/shared/format';
-export default async function Transactions(){await requireAuthorized('allocations.read');const rows=await prisma.transaction.findMany({include:{user:true,allocation:{include:{pool:true}}},orderBy:{createdAt:'desc'},take:150});return <section><h1>Financial ledger</h1><table className="table"><thead><tr><th>Date</th><th>Reference</th><th>User</th><th>Type</th><th>Allocation</th><th>Amount</th><th>Status</th></tr></thead><tbody>{rows.map(t=><tr key={t.id}><td>{t.createdAt.toLocaleString()}</td><td>{t.reference}</td><td>{t.user.email}</td><td>{t.type}</td><td>{t.allocation?.reference??'—'}</td><td>{money(t.amount.toString(),t.currency)}</td><td>{t.status}</td></tr>)}</tbody></table></section>}
+import { requireAuthorized } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { money } from "@/components/shared/format";
+export default async function Transactions() {
+  await requireAuthorized("allocations.read");
+  const rows = await prisma.transaction.findMany({
+    include: { user: true, allocation: { include: { pool: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 150,
+  });
+  return (
+    <section>
+      <h1>Financial ledger</h1>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reference</th>
+            <th>User</th>
+            <th>Type</th>
+            <th>Allocation</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((t) => (
+            <tr key={t.id}>
+              <td>{t.createdAt.toLocaleString()}</td>
+              <td>{t.reference}</td>
+              <td>{t.user.email}</td>
+              <td>{t.type}</td>
+              <td>{t.allocation?.reference ?? "—"}</td>
+              <td>{money(t.amount.toString(), t.currency)}</td>
+              <td>{t.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
