@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/server/db/prisma';
 import { calculateWithdrawalFee, canRequestWithdrawal } from '@/server/services/rules';
 import { brand } from '@/config/brand';
+import { userOwnedActiveAllocationWhere } from '@/server/permissions/ownership';
 
 export async function getEligibleWithdrawalAmount(userId: string) {
   const [active, pending] = await Promise.all([
@@ -19,9 +20,15 @@ export async function requestWithdrawal(input: { userId: string; allocationId?: 
   const eligible = await getEligibleWithdrawalAmount(input.userId);
   if (!canRequestWithdrawal(amount, eligible, brand.withdrawal.minimum)) throw new Error('Withdrawal amount is outside eligible limits.');
   if (input.destinationAddress.length < 16) throw new Error('Destination address is too short.');
+  let verifiedAllocationId: string | undefined;
+  if (input.allocationId) {
+    const allocation = await prisma.allocation.findFirst({ where: userOwnedActiveAllocationWhere(input.userId, input.allocationId) });
+    if (!allocation) throw new Error('Allocation not found or not eligible for withdrawal.');
+    verifiedAllocationId = allocation.id;
+  }
   const fee = calculateWithdrawalFee(amount, brand.withdrawal.feePercent);
   return prisma.$transaction(async (tx) => {
-    const withdrawal = await tx.withdrawal.create({ data: { userId: input.userId, allocationId: input.allocationId, reference: `WDR-${Date.now()}`, amount, fee, netAmount: amount.minus(fee), currency: input.currency, network: input.network, destinationAddress: input.destinationAddress, status: 'REQUESTED' } });
+    const withdrawal = await tx.withdrawal.create({ data: { userId: input.userId, allocationId: verifiedAllocationId, reference: `WDR-${Date.now()}`, amount, fee, netAmount: amount.minus(fee), currency: input.currency, network: input.network, destinationAddress: input.destinationAddress, status: 'REQUESTED' } });
     await tx.notification.create({ data: { userId: input.userId, title: 'Withdrawal requested', message: `Your ${input.currency} withdrawal is under review.`, type: 'WITHDRAWAL', actionUrl: '/dashboard/withdrawals' } });
     return withdrawal;
   });
