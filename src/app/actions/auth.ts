@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/server/db/prisma';
 import { clearSessionCookie, setSessionCookie } from '@/server/auth/session';
+import { defaultAdminPathForRole, type Role } from '@/server/permissions/rbac';
 
 export async function signInAction(formData: FormData) {
   const email = String(formData.get('email') ?? '').toLowerCase().trim();
@@ -12,7 +13,7 @@ export async function signInAction(formData: FormData) {
   if (user.status === 'SUSPENDED' || user.status === 'RESTRICTED') throw new Error('Account access is restricted.');
   await setSessionCookie(user.id);
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  redirect(user.role === 'USER' ? '/dashboard' : '/admin');
+  redirect(user.role === 'USER' ? '/dashboard' : defaultAdminPathForRole(user.role as Role));
 }
 export async function signUpAction(formData: FormData) {
   const firstName = String(formData.get('firstName') ?? '').trim();

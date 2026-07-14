@@ -2,7 +2,7 @@ import { AllocationStatus, PaymentStatus, Prisma, TransactionType } from '@prism
 import { prisma } from '@/server/db/prisma';
 import { canAllocateToPool } from '@/server/services/rules';
 import { paymentProvider } from '@/server/payments/provider';
-import { assertMockPaymentControlsEnabled, type MockPaymentTransition } from '@/server/payments/mock-controls';
+import { assertMockPaymentControlsEnabled, canUserAdvanceMockPayment, expectedUserMockPaymentSource, type MockPaymentTransition } from '@/server/payments/mock-controls';
 import { userOwnedPaymentWhere } from '@/server/permissions/ownership';
 
 export async function createAllocationIntent(input: { userId: string; poolSlug: string; amount: string; currency: string; network: string }) {
@@ -22,18 +22,29 @@ export async function createAllocationIntent(input: { userId: string; poolSlug: 
   });
 }
 
-export async function completeMockPayment(paymentReference: string, nextStatus: MockPaymentTransition) {
+export async function completeMockPayment(paymentReference: string, nextStatus: MockPaymentTransition, expectedCurrentStatus?: PaymentStatus | string) {
   assertMockPaymentControlsEnabled();
   return prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUniqueOrThrow({ where: { paymentReference }, include: { allocation: { include: { pool: true } } } });
     if (!payment.allocation) throw new Error('Payment is not attached to an allocation.');
-    if (payment.status === PaymentStatus.COMPLETED) return payment;
+    if (payment.status === PaymentStatus.COMPLETED) {
+      if (expectedCurrentStatus && nextStatus !== 'COMPLETED') throw new Error('Payment cannot be advanced from its current status by the user flow.');
+      return payment;
+    }
     if (nextStatus !== 'COMPLETED') {
+      if (expectedCurrentStatus) {
+        const updated = await tx.payment.updateMany({ where: { id: payment.id, status: expectedCurrentStatus as PaymentStatus }, data: { status: nextStatus, confirmations: nextStatus === 'CONFIRMING' ? 1 : 0, receivedAmount: payment.requestedAmount } });
+        if (updated.count !== 1) throw new Error('Payment cannot be advanced from its current status by the user flow.');
+        return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+      }
       return tx.payment.update({ where: { id: payment.id }, data: { status: nextStatus, confirmations: nextStatus === 'CONFIRMING' ? 1 : 0, receivedAmount: payment.requestedAmount } });
     }
     const ledgerReference = `TX-${payment.paymentReference}`;
-    const paymentClaim = await tx.payment.updateMany({ where: { id: payment.id, status: { not: PaymentStatus.COMPLETED } }, data: { status: PaymentStatus.COMPLETED, confirmations: 3, receivedAmount: payment.requestedAmount, paidAt: new Date() } });
-    if (paymentClaim.count !== 1) return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    const paymentClaim = await tx.payment.updateMany({ where: { id: payment.id, status: expectedCurrentStatus ? (expectedCurrentStatus as PaymentStatus) : { not: PaymentStatus.COMPLETED } }, data: { status: PaymentStatus.COMPLETED, confirmations: 3, receivedAmount: payment.requestedAmount, paidAt: new Date() } });
+    if (paymentClaim.count !== 1) {
+      if (expectedCurrentStatus) throw new Error('Payment cannot be advanced from its current status by the user flow.');
+      return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
+    }
     const capacityUpdateCount = await tx.$executeRaw`
       UPDATE "TradingPool"
       SET "currentlyAllocated" = "currentlyAllocated" + ${payment.requestedAmount},
@@ -54,5 +65,7 @@ export async function completeUserMockPayment(userId: string, paymentReference: 
   assertMockPaymentControlsEnabled();
   const payment = await prisma.payment.findFirst({ where: userOwnedPaymentWhere(userId, paymentReference), include: { allocation: true } });
   if (!payment || payment.provider !== 'mock' || payment.allocation?.userId !== userId) throw new Error('Payment not found.');
-  return completeMockPayment(paymentReference, nextStatus);
+  const expectedCurrentStatus = expectedUserMockPaymentSource(nextStatus);
+  if (!canUserAdvanceMockPayment(payment.status, nextStatus)) throw new Error('Payment cannot be advanced from its current status by the user flow.');
+  return completeMockPayment(paymentReference, nextStatus, expectedCurrentStatus);
 }
