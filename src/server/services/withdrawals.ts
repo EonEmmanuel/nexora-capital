@@ -1,4 +1,4 @@
-import { Prisma, WithdrawalStatus } from '@prisma/client';
+import { Prisma, TransactionType, WithdrawalStatus } from '@prisma/client';
 import { prisma } from '@/server/db/prisma';
 import { calculateWithdrawalFee, canRequestWithdrawal } from '@/server/services/rules';
 import { brand } from '@/config/brand';
@@ -18,6 +18,7 @@ type EligibilityAllocation = { currentValue: Prisma.Decimal | Prisma.Decimal.Val
 type EligibilityWithdrawal = { amount: Prisma.Decimal | Prisma.Decimal.Value; status: WithdrawalStatus | string };
 
 function decimal(value: Prisma.Decimal | Prisma.Decimal.Value) { return new Prisma.Decimal(value); }
+export function withdrawalLedgerReference(withdrawalReference: string) { return `TX-${withdrawalReference}`; }
 
 export function calculateRemainingWithdrawalEligibility(allocations: EligibilityAllocation[], withdrawals: EligibilityWithdrawal[]) {
   const grossEligible = allocations.reduce((sum, allocation) => sum.plus(decimal(allocation.currentValue).minus(decimal(allocation.initialValue)).plus(decimal(allocation.totalDistributed))), new Prisma.Decimal(0));
@@ -66,6 +67,9 @@ export async function reviewWithdrawal(input:{actorId:string;withdrawalId:string
     const allowed:Record<string,string[]>={REQUESTED:['UNDER_REVIEW','APPROVED','REJECTED'],UNDER_REVIEW:['APPROVED','REJECTED'],APPROVED:['PROCESSING','REJECTED'],PROCESSING:['COMPLETED'],COMPLETED:[],REJECTED:[],CANCELLED:[]};
     if(!allowed[withdrawal.status]?.includes(input.status)) throw new Error(`Invalid withdrawal transition from ${withdrawal.status} to ${input.status}.`);
     const updated=await tx.withdrawal.update({where:{id:withdrawal.id},data:{status:input.status,reviewedById:input.actorId,reviewedAt:new Date(),completedAt:input.status==='COMPLETED'?new Date():undefined,rejectionReason:input.status==='REJECTED'?input.reason:withdrawal.rejectionReason}});
+    if(input.status==='COMPLETED'){
+      await tx.transaction.upsert({where:{reference:withdrawalLedgerReference(withdrawal.reference)},update:{},create:{userId:withdrawal.userId,allocationId:withdrawal.allocationId,type:TransactionType.WITHDRAWAL,amount:withdrawal.amount,currency:withdrawal.currency,status:'COMPLETED',reference:withdrawalLedgerReference(withdrawal.reference),description:`Completed withdrawal ${withdrawal.reference}`}});
+    }
     await tx.auditLog.create({data:{actorId:input.actorId,action:`withdrawal.${input.status.toLowerCase()}`,entityType:'Withdrawal',entityId:withdrawal.id,description:`Withdrawal ${withdrawal.reference} moved to ${input.status}${input.reason?`: ${input.reason}`:''}`}});
     await tx.notification.create({data:{userId:withdrawal.userId,title:'Withdrawal status updated',message:`Withdrawal ${withdrawal.reference} is now ${input.status}.`,type:'WITHDRAWAL',actionUrl:'/dashboard/withdrawals'}});
     return updated;

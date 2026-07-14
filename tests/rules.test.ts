@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { canAllocateToPool, calculateWithdrawalFee, canRequestWithdrawal } from '../src/server/services/rules';
-import { canSearchResource, hasAnyAdminPermission, hasPermission } from '../src/server/permissions/rbac';
+import { canSearchResource, defaultAdminPathForRole, hasAnyAdminPermission, hasPermission } from '../src/server/permissions/rbac';
 import { userOwnedActiveAllocationWhere, userOwnedPaymentWhere, userOwnedTicketWhere } from '../src/server/permissions/ownership';
-import { isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
+import { canUserAdvanceMockPayment, isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
 import { createSessionToken, SESSION_MAX_AGE_MS, verifySessionToken } from '../src/server/auth/session';
 import { enumParam, normalizeQuery, safeCapacityUtilization, safePercent } from '../src/lib/safe-math';
-import { calculateRemainingWithdrawalEligibility, WITHDRAWAL_CONSUMING_STATUSES } from '../src/server/services/withdrawals';
+import { calculateRemainingWithdrawalEligibility, withdrawalLedgerReference, WITHDRAWAL_CONSUMING_STATUSES } from '../src/server/services/withdrawals';
 
 describe('financial allocation rules', () => {
   it('rejects allocations below minimum', () => {
@@ -70,6 +70,11 @@ describe('withdrawal entitlement accounting', () => {
     const afterSecond = calculateRemainingWithdrawalEligibility([allocation], [{ amount: '500', status: 'REQUESTED' }, { amount: '500', status: 'REQUESTED' }]);
     expect(afterSecond.toString()).toBe('0');
   });
+
+  it('uses a deterministic withdrawal ledger reference for idempotent completion entries', () => {
+    expect(withdrawalLedgerReference('WDR-123')).toBe('TX-WDR-123');
+  });
+
 });
 
 describe('RBAC and admin shell access', () => {
@@ -86,6 +91,12 @@ describe('RBAC and admin shell access', () => {
   });
   it('allows super admin full settings access', () => {
     expect(hasPermission('SUPER_ADMIN', 'settings.manage')).toBe(true);
+  });
+  it('chooses permitted landing pages for limited staff roles', () => {
+    expect(defaultAdminPathForRole('SUPPORT')).toBe('/admin/users');
+    expect(defaultAdminPathForRole('ANALYST')).toBe('/admin/pools');
+    expect(defaultAdminPathForRole('FINANCE')).toBe('/admin');
+    expect(defaultAdminPathForRole('USER')).toBe('/dashboard');
   });
 });
 
@@ -131,6 +142,14 @@ describe('mock payment authorization helpers', () => {
   });
   it('constrains user mock payment lookup to the owning user and payment reference', () => {
     expect(userOwnedPaymentWhere('user_a', 'PAY-1')).toEqual({ paymentReference: 'PAY-1', userId: 'user_a' });
+  });
+  it('enforces forward-only user mock payment transitions and blocks review states', () => {
+    expect(canUserAdvanceMockPayment('PENDING', 'DETECTED')).toBe(true);
+    expect(canUserAdvanceMockPayment('DETECTED', 'CONFIRMING')).toBe(true);
+    expect(canUserAdvanceMockPayment('CONFIRMING', 'COMPLETED')).toBe(true);
+    expect(canUserAdvanceMockPayment('PENDING', 'COMPLETED')).toBe(false);
+    expect(canUserAdvanceMockPayment('CONFIRMING', 'DETECTED')).toBe(false);
+    expect(canUserAdvanceMockPayment('UNDER_REVIEW', 'COMPLETED')).toBe(false);
   });
 });
 

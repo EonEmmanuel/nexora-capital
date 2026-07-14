@@ -2,7 +2,7 @@ import { AllocationStatus, PaymentStatus, Prisma, TransactionType } from '@prism
 import { prisma } from '@/server/db/prisma';
 import { canAllocateToPool } from '@/server/services/rules';
 import { paymentProvider } from '@/server/payments/provider';
-import { assertMockPaymentControlsEnabled, type MockPaymentTransition } from '@/server/payments/mock-controls';
+import { assertMockPaymentControlsEnabled, canUserAdvanceMockPayment, type MockPaymentTransition } from '@/server/payments/mock-controls';
 import { userOwnedPaymentWhere } from '@/server/permissions/ownership';
 
 export async function createAllocationIntent(input: { userId: string; poolSlug: string; amount: string; currency: string; network: string }) {
@@ -54,5 +54,6 @@ export async function completeUserMockPayment(userId: string, paymentReference: 
   assertMockPaymentControlsEnabled();
   const payment = await prisma.payment.findFirst({ where: userOwnedPaymentWhere(userId, paymentReference), include: { allocation: true } });
   if (!payment || payment.provider !== 'mock' || payment.allocation?.userId !== userId) throw new Error('Payment not found.');
+  if (!canUserAdvanceMockPayment(payment.status, nextStatus)) throw new Error('Payment cannot be advanced from its current status by the user flow.');
   return completeMockPayment(paymentReference, nextStatus);
 }

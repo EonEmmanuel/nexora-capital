@@ -25,3 +25,5 @@ export function requirePermission(role: Role, permission: Permission) { if (!has
 export function visibleAdminNav(role: Role) { return [
   ['/admin','Overview','audit.read'],['/admin/users','Users','users.read'],['/admin/pools','Trading Pools','pools.read'],['/admin/allocations','Allocations','allocations.read'],['/admin/payments','Payments','payments.read'],['/admin/transactions','Transactions','allocations.read'],['/admin/withdrawals','Withdrawals','withdrawals.read'],['/admin/performance','Performance','performance.read'],['/admin/support','Support','support.read'],['/admin/referrals','Referrals','referrals.read'],['/admin/audit-logs','Audit Logs','audit.read'],['/admin/settings','Platform Settings','settings.manage'],
 ].filter(([, , permission]) => hasPermission(role, permission as Permission)); }
+
+export function defaultAdminPathForRole(role: Role) { return visibleAdminNav(role)[0]?.[0] ?? '/dashboard'; }
