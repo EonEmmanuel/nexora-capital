@@ -2,6 +2,8 @@ import { AllocationStatus, PaymentStatus, Prisma, TransactionType } from '@prism
 import { prisma } from '@/server/db/prisma';
 import { canAllocateToPool } from '@/server/services/rules';
 import { paymentProvider } from '@/server/payments/provider';
+import { assertMockPaymentControlsEnabled, type MockPaymentTransition } from '@/server/payments/mock-controls';
+import { userOwnedPaymentWhere } from '@/server/permissions/ownership';
 
 export async function createAllocationIntent(input: { userId: string; poolSlug: string; amount: string; currency: string; network: string }) {
   const amount = new Prisma.Decimal(input.amount);
@@ -20,7 +22,8 @@ export async function createAllocationIntent(input: { userId: string; poolSlug: 
   });
 }
 
-export async function completeMockPayment(paymentReference: string, nextStatus: 'DETECTED' | 'CONFIRMING' | 'COMPLETED') {
+export async function completeMockPayment(paymentReference: string, nextStatus: MockPaymentTransition) {
+  assertMockPaymentControlsEnabled();
   return prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUniqueOrThrow({ where: { paymentReference }, include: { allocation: { include: { pool: true } } } });
     if (!payment.allocation) throw new Error('Payment is not attached to an allocation.');
@@ -38,4 +41,12 @@ export async function completeMockPayment(paymentReference: string, nextStatus: 
     await tx.notification.create({ data: { userId: payment.userId, title: 'Allocation activated', message: `${payment.allocation.pool.name} is now active.`, type: 'SUCCESS', actionUrl: `/dashboard/pools/${payment.allocationId}` } });
     return tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
   });
+}
+
+
+export async function completeUserMockPayment(userId: string, paymentReference: string, nextStatus: MockPaymentTransition) {
+  assertMockPaymentControlsEnabled();
+  const payment = await prisma.payment.findFirst({ where: userOwnedPaymentWhere(userId, paymentReference), include: { allocation: true } });
+  if (!payment || payment.provider !== 'mock' || payment.allocation?.userId !== userId) throw new Error('Payment not found.');
+  return completeMockPayment(paymentReference, nextStatus);
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { canAllocateToPool, calculateWithdrawalFee, canRequestWithdrawal } from '../src/server/services/rules';
 import { canSearchResource, hasAnyAdminPermission, hasPermission } from '../src/server/permissions/rbac';
-import { userOwnedActiveAllocationWhere, userOwnedTicketWhere } from '../src/server/permissions/ownership';
+import { userOwnedActiveAllocationWhere, userOwnedPaymentWhere, userOwnedTicketWhere } from '../src/server/permissions/ownership';
+import { isValidMockPaymentTransition, mockPaymentControlsEnabled } from '../src/server/payments/mock-controls';
 
 describe('financial allocation rules', () => {
   it('rejects allocations below minimum', () => {
@@ -74,5 +75,23 @@ describe('object ownership query boundaries', () => {
   });
   it('constrains withdrawal allocations to active allocations owned by the user', () => {
     expect(userOwnedActiveAllocationWhere('user_a', 'allocation_1')).toEqual({ id: 'allocation_1', userId: 'user_a', status: 'ACTIVE' });
+  });
+});
+
+
+describe('mock payment authorization helpers', () => {
+  it('permits only expected mock payment transitions', () => {
+    expect(isValidMockPaymentTransition('DETECTED')).toBe(true);
+    expect(isValidMockPaymentTransition('CONFIRMING')).toBe(true);
+    expect(isValidMockPaymentTransition('COMPLETED')).toBe(true);
+    expect(isValidMockPaymentTransition('REFUNDED')).toBe(false);
+  });
+  it('disables mock payment controls in production or non-mock provider mode', () => {
+    expect(mockPaymentControlsEnabled('development', 'mock')).toBe(true);
+    expect(mockPaymentControlsEnabled('production', 'mock')).toBe(false);
+    expect(mockPaymentControlsEnabled('development', 'real-provider')).toBe(false);
+  });
+  it('constrains user mock payment lookup to the owning user and payment reference', () => {
+    expect(userOwnedPaymentWhere('user_a', 'PAY-1')).toEqual({ paymentReference: 'PAY-1', userId: 'user_a' });
   });
 });
