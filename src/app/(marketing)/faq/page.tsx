@@ -1,0 +1,2 @@
+import { brand } from '@/config/brand';
+export const metadata={title:'Faq'};export default function Page(){return <main className="container" style={{paddingTop:56}}><span className="badge">faq</span><h1 style={{fontSize:54,textTransform:'capitalize'}}>faq</h1><div className="card" style={{padding:28}}><p className="muted">Premium faq content for {brand.companyName}. This page is structured for CMS-backed content in later phases and uses the shared marketing layout, disclosures, and design system.</p><p>{brand.riskDisclosure}</p></div></main>}
